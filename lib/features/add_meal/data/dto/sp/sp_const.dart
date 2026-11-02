@@ -145,6 +145,13 @@ class SPConst {
     'fdc_survey',
     'fdc_branded',
     'bls',
+    // Fork: the European tables ship in the offline food database
+    // (FORK.md), so they are selectable here before the hosted one has them.
+    'ciqual',
+    'fineli',
+    'frida',
+    'mvt',
+    'slv',
   ];
 
   /// Public website per backend source: the "learn more" link in Settings →

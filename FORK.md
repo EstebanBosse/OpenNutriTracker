@@ -1,9 +1,13 @@
-# Fork notes: voice input
+# Fork notes: voice input and offline food database
 
 This is a fork of [simonoppowa/OpenNutriTracker](https://github.com/simonoppowa/OpenNutriTracker)
-(GPL-3.0). It adds one feature: **dictating a meal in Spanish or English**, which
-is then matched against the existing food databases and logged through
-upstream's normal review screen.
+(GPL-3.0). It adds two features:
+
+- **dictating a meal in Spanish or English**, which is then matched against the
+  existing food databases and logged through upstream's normal review screen;
+- an **offline food database** (see [below](#offline-food-database)): the
+  generic foods the Supabase backend serves (USDA, BLS and five European
+  tables), downloaded once as a SQLite file and searched on the phone.
 
 ## How it works
 
@@ -54,20 +58,69 @@ New files (no merge risk):
 | `lib/features/add_meal/presentation/voice/voice_input_button.dart` | Language chip (app, device and English language) and mic, used as a `TextField.suffixIcon` |
 | `test/unit_test/dictation_transcript_test.dart`, `test/features/add_meal/presentation/voice_input_button_test.dart` | Tests |
 | `test/unit_test/fork_voice/english_queries_prompt_test.dart` | **Fork-only** test |
+| `lib/features/add_meal/data/data_sources/food_rpc_client.dart` | **Fork-only**: `FoodRpcClient` seam, `SupabaseFoodRpcClient` |
+| `lib/features/add_meal/data/offline_food_db/sqlite_food_rpc_client.dart` | **Fork-only**: the five RPCs in SQLite, websearch → FTS5 |
+| `lib/features/add_meal/data/offline_food_db/offline_food_db.dart` | **Fork-only**: open/download/verify/remove, switches the client |
+| `lib/features/settings/presentation/widgets/offline_food_db_section.dart` | **Fork-only**: the Settings section |
+| `test/unit_test/fork_offline_food_db/`, `test/fixture/offline_food_db/foods_fixture.sqlite.gz` | **Fork-only** tests and their fixture (built by the backend's `build_sqlite.py`) |
 
 Small edits to upstream files (where merge conflicts could happen):
 
 | File | Edit |
 | --- | --- |
-| `pubspec.yaml` / `pubspec.lock` | `speech_to_text` |
+| `pubspec.yaml` / `pubspec.lock` | `speech_to_text`; **fork-only** `sqlite3` 3.5.2 (bundles SQLite with FTS5 through build hooks; ≥3.6 needs a newer Flutter) |
+| `lib/features/add_meal/data/data_sources/sp_food_data_source.dart` | **Fork-only**: `_rpcClient()`; the three `SupabaseClient` parameters become `FoodRpcClient` |
+| `lib/features/add_meal/data/dto/sp/sp_const.dart` | **Fork-only**: five European codes in `settingsSelectableFoodSources` |
+| `lib/core/utils/locale_units.dart` | **Fork-only**: `_forkSourceCountries` defaults in `defaultFoodSourceToggles` |
+| `lib/features/settings/presentation/widgets/food_sources_screen.dart` | **Fork-only**: `OfflineFoodDbSection` below the sources |
+| `test/features/onboarding/presentation/widgets/onboarding_other_options_page_body_test.dart` | **Fork-only**: source counts computed from `settingsSelectableFoodSources` instead of 5 and 6 |
 | `lib/features/add_meal/presentation/widgets/add_food_methods.dart` | `suffixIcon:` on the Describe field |
 | `lib/features/add_meal/presentation/screens/bulk_add_screen.dart` | `suffixIcon:` on the review-screen field |
 | `lib/features/add_meal/data/model_meal_text_interpreter.dart` | **Fork-only**: `englishQueries` flag; appends one rule after upstream's prompt |
-| `lib/core/utils/locator.dart` | **Fork-only**: passes `englishQueries: true` |
-| `lib/l10n/intl_en.arb` | five `voiceInput*` keys, placed after `bulkAddParseLabel` |
-| `lib/l10n/intl_es.arb` | **Fork-only**: the same five keys in Spanish (upstream gets translations from Weblate) |
+| `lib/core/utils/locator.dart` | **Fork-only**: passes `englishQueries: true`; registers `OfflineFoodDb` as `FoodRpcClient` |
+| `lib/l10n/intl_en.arb` | five `voiceInput*` keys, placed after `bulkAddParseLabel`; **fork-only** `offlineFoodDb*` keys after `foodSourcesHelpText` |
+| `lib/l10n/intl_es.arb` | **Fork-only**: the same keys in Spanish (upstream gets translations from Weblate) |
 | `android/app/src/main/AndroidManifest.xml` | `RECORD_AUDIO`, `RecognitionService` query |
 | `ios/Runner/Info.plist` | microphone and speech-recognition usage strings |
+
+## Offline food database
+
+The fork has no Supabase project, so without this only Open Food Facts answers.
+The backend fork ([EstebanBosse/OpenNutriTracker-Backend](https://github.com/EstebanBosse/OpenNutriTracker-Backend),
+`scripts/shared/build_sqlite.py`) builds `foods.sqlite` from the same CSVs the
+Supabase import loads: the `food_summary` view, translations, portions and
+FTS5 indexes. It is published as `foods.sqlite.gz` on that repo's releases.
+
+```
+Settings → Food databases → Offline food database → Download
+  → releases/latest/download/foods.sqlite.gz (≈5 MB, ≈16 MB unpacked)
+  → unpacked beside the old file, opened, checked (schema version,
+    quick_check, a search) and renamed over it
+  → every later search uses it — no restart
+```
+
+`SpFoodDataSource` sends all five backend calls through one interface,
+`FoodRpcClient`. `SupabaseFoodRpcClient` is upstream's behaviour;
+`SqliteFoodRpcClient` answers the same function names with the same row maps,
+so the locale, retry, source-filter and DTO code above it is unchanged.
+`OfflineFoodDb` is the registered client: SQLite while
+`getApplicationSupportDirectory()/foods.sqlite` exists with
+`meta.schema_version` 1, Supabase otherwise. Search ranking is identical;
+what *matches* can differ slightly from Postgres text search (Porter vs
+Snowball stemming, diacritics folded, hyphens) — the backend README lists every
+difference. Machine-translated food names (`translate_all.py`) are not in the
+file, so non-English searches find the native names (BLS German, Fineli
+Finnish/Swedish, …) and fall back to English as upstream does.
+
+The five European sources (CIQUAL, Fineli, DTU FCDB, Matvaretabellen,
+Livsmedelsverket) are selectable in Settings → Food databases. Onboarding
+turns each on only in its own country; for an existing profile a source it
+has never seen is on, as upstream treats every new source.
+
+To publish a new database: build it in the backend repo (README, "Offline
+SQLite database"), then attach `foods.sqlite.gz` to a new GitHub release
+there. Bump `SCHEMA_VERSION` there and `offlineFoodDbSchemaVersion` here
+together when the tables change.
 
 ## Syncing with upstream
 
@@ -86,7 +139,9 @@ flutter gen-l10n && flutter analyze && flutter test
 If a merge conflicts:
 
 - **`intl_es.arb`**: Weblate rewrites this file. Keep upstream's version and
-  re-add the five `voiceInput*` lines.
+  re-add the five `voiceInput*` lines and the `offlineFoodDb*` lines.
+- **`sp_food_data_source.dart`**: keep upstream's version, then route its
+  backend calls through `_rpcClient()` / `FoodRpcClient` again.
 - **`pubspec.lock`**: take upstream's version, then run `flutter pub get`.
 - **`model_meal_text_interpreter.dart`**: keep upstream's prompt, then re-add
   the `englishQueries` field and the `system:` line.
@@ -99,8 +154,9 @@ cause needless conflicts. Format only the fork's files.
 
 You need Flutter 3.44.6 (`.fvmrc`). Copy `.env.example` to `.env`. With the
 placeholder values the app runs, but only **Open Food Facts** is searched,
-because the USDA/BLS backend is a Supabase project. To get it, follow
-`docs/supabase-self-hosting.md` and put its URL and anon key in `.env`, then
+because the USDA/BLS backend is a Supabase project — until the offline food
+database is downloaded in Settings → Food databases. For a Supabase backend
+instead, follow `docs/supabase-self-hosting.md` and put its URL and anon key in `.env`, then
 run `dart run build_runner build`.
 
 ```sh

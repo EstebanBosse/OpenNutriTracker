@@ -98,6 +98,10 @@ dependencies:
   # (Android SpeechRecognizer / iOS SFSpeech); no audio is sent by the app.
   speech_to_text: ^7.5.0
 
+  # Fork: the offline food database (FORK.md). sqlite3 3.x bundles its own
+  # SQLite through build hooks, compiled with FTS5, on Android and iOS alike.
+  sqlite3: 3.5.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

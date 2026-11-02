@@ -68,6 +68,16 @@ class LocaleUnitDefaults {
 /// Countries whose national food composition database the app carries.
 const _blsCountries = {'DE', 'AT', 'CH'};
 
+// Fork: each European table starts enabled in its own country only — its
+// foods carry English names, but a Finnish fish soup is noise in Madrid.
+const _forkSourceCountries = <String, Set<String>>{
+  'ciqual': {'FR', 'MC'},
+  'fineli': {'FI', 'AX'},
+  'frida': {'DK', 'FO', 'GL'},
+  'mvt': {'NO', 'SJ'},
+  'slv': {'SE'},
+};
+
 /// Which backend food sources onboarding starts with, by locale.
 ///
 /// Open Food Facts is always searched and is not part of this map, so
@@ -88,6 +98,8 @@ Map<String, bool> defaultFoodSourceToggles(String localeName) {
         // US branded products are the one set that is regionally wrong,
         // not merely foreign.
         'fdc_branded' => !usesBls,
+        _ when _forkSourceCountries.containsKey(source) =>
+          _forkSourceCountries[source]!.contains(country), // Fork
         _ => true,
       },
   };
