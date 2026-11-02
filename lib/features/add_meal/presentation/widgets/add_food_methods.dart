@@ -256,7 +256,7 @@ class _DescribeMealPanelState extends State<DescribeMealPanel> {
                 hintStyle: textTheme.bodyLarge?.copyWith(
                   color: palette.textMuted,
                 ),
-                // Fork: dictate the meal and go straight to the matches.
+                // Dictate the meal and go straight to the matches.
                 suffixIcon: VoiceInputButton(
                   controller: _controller,
                   onDictated: widget.onFindFoods,

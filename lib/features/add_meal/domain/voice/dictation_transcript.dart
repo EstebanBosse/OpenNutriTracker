@@ -1,5 +1,5 @@
-// Fork (voice input). Kept free of Flutter and plugin imports so the
-// accumulation rules can be unit tested on their own.
+// Kept free of Flutter and plugin imports so the accumulation rules can be
+// unit tested on their own.
 
 /// What has been heard so far in one dictation session.
 ///

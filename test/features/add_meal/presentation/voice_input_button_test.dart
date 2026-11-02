@@ -93,7 +93,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.mic_rounded));
     await tester.pump();
-    expect(service.languages.single, DictationLanguage.es);
+    expect(service.languages.single, const DictationLanguage('es'));
     expect(find.byIcon(Icons.stop_rounded), findsOneWidget);
 
     service.hear('dos huevos');
@@ -157,9 +157,24 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.mic_rounded));
     await tester.pump();
-    expect(service.languages.single, DictationLanguage.en);
+    expect(service.languages.single, DictationLanguage.english);
     service.endSegment();
     await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('offers the app language beside English, not a fixed list', (
+    tester,
+  ) async {
+    await pump(tester, locale: const Locale('de'));
+    await tester.pumpAndSettle();
+    expect(find.text('DE'), findsOneWidget);
+    await tester.tap(find.text('DE'));
+    await tester.pumpAndSettle();
+    expect(find.text('EN'), findsOneWidget);
+    await tester.tap(find.text('EN'));
+    await tester.pumpAndSettle();
+    // The test device is en_US, so German and English are the whole cycle.
+    expect(find.text('DE'), findsOneWidget);
   });
 
   testWidgets('a denied permission is explained', (tester) async {

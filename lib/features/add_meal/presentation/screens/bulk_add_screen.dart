@@ -587,7 +587,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
               keyboardType: TextInputType.multiline,
               decoration: InputDecoration(
                 hintText: S.of(context).bulkAddInputHint,
-                // Fork: dictate the meal, then match it straight away.
+                // Dictate the meal, then match it straight away.
                 suffixIcon: VoiceInputButton(
                   controller: _textController,
                   onDictated: (_) => _onParsePressed(),

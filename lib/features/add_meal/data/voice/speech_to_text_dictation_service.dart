@@ -1,4 +1,3 @@
-// Fork (voice input).
 import 'dart:ui' show PlatformDispatcher;
 
 import 'package:logging/logging.dart';
@@ -11,7 +10,8 @@ import 'package:speech_to_text/speech_to_text.dart';
 ///
 /// Nothing is recorded or sent by the app itself. Whether the platform
 /// recognizes on the device or on its vendor's servers is the platform's
-/// choice; the app asks for on-device recognition where it is available.
+/// choice: `onDevice` is left off because forcing it fails outright on the
+/// many Android devices without an offline model for the language.
 class SpeechToTextDictationService implements DictationService {
   static final _log = Logger('SpeechToTextDictationService');
 

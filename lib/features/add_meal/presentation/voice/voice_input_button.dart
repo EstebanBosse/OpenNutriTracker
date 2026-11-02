@@ -1,4 +1,3 @@
-// Fork (voice input).
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/utils/secure_app_storage_provider.dart';
@@ -14,8 +13,11 @@ import 'package:opennutritracker/generated/l10n.dart';
 /// text so the screen can match it straight away. What was already typed is
 /// kept, and dictation appends to it.
 ///
-/// Meant as a `TextField.suffixIcon`, so hooking it into a screen is a one
-/// line change to an upstream file.
+/// The chip offers the app language, the device language and English, so a
+/// bilingual user can switch without changing either setting. The choice is
+/// remembered.
+///
+/// Meant as a `TextField.suffixIcon`.
 class VoiceInputButton extends StatefulWidget {
   final TextEditingController controller;
   final ValueChanged<String> onDictated;
@@ -36,7 +38,7 @@ class VoiceInputButton extends StatefulWidget {
 
 class _VoiceInputButtonState extends State<VoiceInputButton> {
   static final _log = Logger('VoiceInputButton');
-  static const _languageKey = 'ForkVoiceInputLanguage';
+  static const _languageKey = 'VoiceInputLanguage';
 
   /// One per app run: the platform recognizer is a singleton anyway, and
   /// the adapter caches resolved locales.
@@ -72,23 +74,31 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
       _log.fine('Could not read the dictation language: $e');
     }
     if (!mounted) return;
-    setState(() => _language = DictationLanguage.fromCode(stored));
+    if (stored == null || stored.isEmpty) return;
+    setState(() => _language = DictationLanguage(stored!));
   }
 
-  /// The stored choice, else the app language when it is offered, else
-  /// English.
-  DictationLanguage _effectiveLanguage(BuildContext context) =>
-      _language ??
-      DictationLanguage.fromCode(
-        Localizations.localeOf(context).languageCode,
-      ) ??
-      DictationLanguage.en;
+  /// The app language, the device language and English, without repeats.
+  List<DictationLanguage> _offered(BuildContext context) => {
+    DictationLanguage(Localizations.localeOf(context).languageCode),
+    DictationLanguage(
+      WidgetsBinding.instance.platformDispatcher.locale.languageCode,
+    ),
+    DictationLanguage.english,
+  }.toList();
+
+  /// The stored choice while it is still on offer, else the app language.
+  DictationLanguage _effectiveLanguage(BuildContext context) {
+    final offered = _offered(context);
+    final stored = _language;
+    return stored != null && offered.contains(stored) ? stored : offered.first;
+  }
 
   Future<void> _toggleLanguage() async {
-    final values = DictationLanguage.values;
+    final offered = _offered(context);
     final next =
-        values[(values.indexOf(_effectiveLanguage(context)) + 1) %
-            values.length];
+        offered[(offered.indexOf(_effectiveLanguage(context)) + 1) %
+            offered.length];
     setState(() => _language = next);
     try {
       await SecureAppStorageProvider.secureAppStorage.write(

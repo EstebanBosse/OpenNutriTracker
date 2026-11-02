@@ -37,16 +37,23 @@ matches update.
 
 ## What the fork changes
 
-Fork code is marked with a `// Fork` comment. New files (no merge risk):
+The voice feature itself was submitted upstream as
+[#1514](https://github.com/simonoppowa/OpenNutriTracker/pull/1514), and the
+fork carries the same code byte for byte. If upstream merges it, the next
+upstream merge makes those files identical and only the **fork-only** rows
+below remain. Fork-only code is marked with a `// Fork` comment.
+
+New files (no merge risk):
 
 | File | Role |
 | --- | --- |
-| `lib/features/add_meal/domain/voice/dictation_service.dart` | Recognizer interface, `DictationLanguage` (es, en) |
+| `lib/features/add_meal/domain/voice/dictation_service.dart` | Recognizer interface, `DictationLanguage` |
 | `lib/features/add_meal/domain/voice/dictation_transcript.dart` | Joins recognizer segments (pure Dart) |
 | `lib/features/add_meal/data/voice/speech_to_text_dictation_service.dart` | `speech_to_text` adapter, regional locale pick (e.g. `es_AR`) |
 | `lib/features/add_meal/presentation/voice/dictation_session.dart` | Restart-on-pause loop and silence detection (idea from fud-ai, MIT) |
-| `lib/features/add_meal/presentation/voice/voice_input_button.dart` | ES/EN chip and mic, used as a `TextField.suffixIcon` |
-| `test/unit_test/fork_voice/*`, `test/features/add_meal/presentation/voice_input_button_test.dart` | Tests |
+| `lib/features/add_meal/presentation/voice/voice_input_button.dart` | Language chip (app, device and English language) and mic, used as a `TextField.suffixIcon` |
+| `test/unit_test/dictation_transcript_test.dart`, `test/features/add_meal/presentation/voice_input_button_test.dart` | Tests |
+| `test/unit_test/fork_voice/english_queries_prompt_test.dart` | **Fork-only** test |
 
 Small edits to upstream files (where merge conflicts could happen):
 
@@ -55,21 +62,23 @@ Small edits to upstream files (where merge conflicts could happen):
 | `pubspec.yaml` / `pubspec.lock` | `speech_to_text` |
 | `lib/features/add_meal/presentation/widgets/add_food_methods.dart` | `suffixIcon:` on the Describe field |
 | `lib/features/add_meal/presentation/screens/bulk_add_screen.dart` | `suffixIcon:` on the review-screen field |
-| `lib/features/add_meal/data/model_meal_text_interpreter.dart` | `englishQueries` flag; appends one rule after upstream's prompt |
-| `lib/core/utils/locator.dart` | passes `englishQueries: true` |
-| `lib/l10n/intl_en.arb`, `lib/l10n/intl_es.arb` | five `voiceInput*` keys, placed after `bulkAddParseLabel` |
+| `lib/features/add_meal/data/model_meal_text_interpreter.dart` | **Fork-only**: `englishQueries` flag; appends one rule after upstream's prompt |
+| `lib/core/utils/locator.dart` | **Fork-only**: passes `englishQueries: true` |
+| `lib/l10n/intl_en.arb` | five `voiceInput*` keys, placed after `bulkAddParseLabel` |
+| `lib/l10n/intl_es.arb` | **Fork-only**: the same five keys in Spanish (upstream gets translations from Weblate) |
 | `android/app/src/main/AndroidManifest.xml` | `RECORD_AUDIO`, `RecognitionService` query |
 | `ios/Runner/Info.plist` | microphone and speech-recognition usage strings |
 
 ## Syncing with upstream
 
 Remotes: `origin` = this fork, `upstream` = simonoppowa. Upstream releases land
-on `main`, and feature work happens on `develop`. The fork follows `main`.
+on `main`, and feature work happens on `develop`. The fork's `main` is upstream
+`main` plus the fork's changes. Upstream PRs are cut from `upstream/develop` on
+their own branches (`feat/voice-input-upstream`).
 
 ```sh
 git fetch upstream
-git checkout main && git merge upstream/main     # keep main == upstream
-git checkout feat/voice-input && git merge main  # or: git rebase main
+git checkout main && git merge upstream/main
 flutter pub get && dart run build_runner build --delete-conflicting-outputs
 flutter gen-l10n && flutter analyze && flutter test
 ```

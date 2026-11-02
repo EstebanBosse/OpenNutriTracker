@@ -1,4 +1,3 @@
-// Fork (voice input).
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';

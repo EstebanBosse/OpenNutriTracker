@@ -1,26 +1,54 @@
-// Fork (voice input).
-
-/// A language the user can dictate in. Only the languages listed in
-/// [values] are offered; adding one is a line here plus its fallback locale.
-enum DictationLanguage {
-  es('es', 'es_ES'),
-  en('en', 'en_US');
-
-  /// ISO 639-1 code, also what is persisted.
+/// A language to dictate in, as an ISO 639-1 code.
+///
+/// Not an enum: the recognizer supports far more languages than the app has
+/// reason to list, so the button offers whichever of the app language, the
+/// device language and English apply, and this only has to carry the code.
+class DictationLanguage {
   final String code;
+
+  const DictationLanguage(this.code);
+
+  static const english = DictationLanguage('en');
+
+  /// Region tried when the device lists no recognizer locale for [code].
+  static const _defaultRegions = {
+    'cs': 'CZ',
+    'da': 'DK',
+    'de': 'DE',
+    'en': 'US',
+    'es': 'ES',
+    'fi': 'FI',
+    'fr': 'FR',
+    'hu': 'HU',
+    'it': 'IT',
+    'nb': 'NO',
+    'nl': 'NL',
+    'pl': 'PL',
+    'pt': 'BR',
+    'ru': 'RU',
+    'sk': 'SK',
+    'sv': 'SE',
+    'tr': 'TR',
+    'uk': 'UA',
+    'zh': 'CN',
+  };
 
   /// Recognizer locale to use when the device does not list one for this
   /// language.
-  final String fallbackLocaleId;
-
-  const DictationLanguage(this.code, this.fallbackLocaleId);
-
-  static DictationLanguage? fromCode(String? code) {
-    for (final language in values) {
-      if (language.code == code) return language;
-    }
-    return null;
+  String get fallbackLocaleId {
+    final region = _defaultRegions[code];
+    return region == null ? code : '${code}_$region';
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is DictationLanguage && other.code == code;
+
+  @override
+  int get hashCode => code.hashCode;
+
+  @override
+  String toString() => 'DictationLanguage($code)';
 }
 
 /// Why a dictation session could not run at all. Errors inside a running
