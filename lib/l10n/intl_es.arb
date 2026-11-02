@@ -1358,6 +1358,11 @@
   "bulkAddTitle": "Agregar varios elementos",
   "bulkAddInputHint": "2 huevos, 100 g de tostada, café solo",
   "bulkAddParseLabel": "Buscar alimentos",
+  "voiceInputStartTooltip": "Dicta tu comida",
+  "voiceInputStopTooltip": "Dejar de escuchar",
+  "voiceInputLanguageTooltip": "Idioma del dictado: {language}. Toca para cambiarlo.",
+  "voiceInputPermissionDenied": "Permite el acceso al micrófono y al reconocimiento de voz para dictar una comida.",
+  "voiceInputUnavailable": "El reconocimiento de voz no está disponible en este dispositivo.",
   "bulkAddSubmitLabel": "Registrar {count} elementos",
   "@bulkAddSubmitLabel": {
     "placeholders": {

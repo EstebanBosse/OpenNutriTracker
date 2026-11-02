@@ -171,8 +171,12 @@ Future<void> initLocator() async {
   locator.registerLazySingleton<ReadMealTextUseCase>(
     () => ReadMealTextUseCase(
       locator<AiCredentialStorage>(),
-      (selection) =>
-          ModelMealTextInterpreter(mealItemsApiFor(locator(), selection)),
+      (selection) => ModelMealTextInterpreter(
+        mealItemsApiFor(locator(), selection),
+        // Fork: queries in English so Spanish (spoken or typed) meals
+        // resolve against the English food corpus.
+        englishQueries: true,
+      ),
     ),
   );
   locator.registerLazySingleton<ReadMealPhotoUseCase>(

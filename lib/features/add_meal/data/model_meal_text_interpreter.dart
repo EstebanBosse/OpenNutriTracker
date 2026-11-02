@@ -14,7 +14,21 @@ import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 class ModelMealTextInterpreter implements MealTextInterpreter {
   final MealItemsApi _api;
 
-  ModelMealTextInterpreter(this._api);
+  /// Fork: when true, every `query` comes back in English whatever language
+  /// the meal was written or spoken in. The backend's widest corpus (USDA)
+  /// is English and Spanish has no `food_translation` rows, so an English
+  /// query is what finds a match for "dos huevos y una tostada".
+  final bool englishQueries;
+
+  ModelMealTextInterpreter(this._api, {this.englishQueries = false});
+
+  /// Fork: appended after the upstream prompt rather than edited into it, so
+  /// upstream changes to [_systemPrompt] merge without conflicts.
+  static const _englishQueriesRule = '''
+Override for the "query" rule above: always write "query" in English,
+translating the food name when the user wrote in another language
+("dos huevos y una tostada" -> "eggs", "toast"; "un vaso de leche" -> "milk").
+Keep brand names as written.''';
 
   /// The whole contract with the model, in one place.
   ///
@@ -59,11 +73,12 @@ Rules:
       return const MealTextParseResult(items: [], errors: []);
     }
 
+    final base = localeCode == null
+        ? _systemPrompt
+        : '$_systemPrompt\nThe user\'s app language is "$localeCode".';
     return _api.requestItems(
       content: MealTextContent(trimmed),
-      system: localeCode == null
-          ? _systemPrompt
-          : '$_systemPrompt\nThe user\'s app language is "$localeCode".',
+      system: englishQueries ? '$base\n$_englishQueriesRule' : base,
     );
   }
 }
