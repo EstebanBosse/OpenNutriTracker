@@ -5,6 +5,7 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dar
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/read_meal_photo_usecase.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/read_meal_text_usecase.dart';
+import 'package:opennutritracker/features/add_meal/domain/usecase/refine_resolved_meals_usecase.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/features/add_meal/util/portion_match.dart';
@@ -391,6 +392,9 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
   final ReadMealTextUseCase _readMealTextUseCase;
   final ReadMealPhotoUseCase _readMealPhotoUseCase;
 
+  /// Fork: optional second AI pass that picks matches and portions.
+  final RefineResolvedMealsUseCase? _refiner;
+
   /// Which read is current. Bumped by every parse, photo read and cancel, and
   /// compared after every await, so a result that lands for an earlier
   /// attempt is dropped. `emit.isDone` cannot do this: it only answers for a
@@ -403,8 +407,10 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
   BulkAddBloc(
     this._resolveParsedMealsUseCase,
     this._readMealTextUseCase,
-    this._readMealPhotoUseCase,
-  ) : super(const BulkAddInitial()) {
+    this._readMealPhotoUseCase, {
+    RefineResolvedMealsUseCase? refiner,
+  }) : _refiner = refiner,
+       super(const BulkAddInitial()) {
     on<ParseBulkTextEvent>(_onParse);
     on<ReadMealPhotoEvent>(_onReadPhoto);
     on<ReadMealPhotoFailedEvent>(
@@ -442,6 +448,8 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
           ? BulkAddReadSource.model
           : BulkAddReadSource.parser,
       modelFailure: reading.modelFailure,
+      // Fork: only a line a model read gets the second pass.
+      refineText: reading.usedModel ? event.text : null,
     );
   }
 
@@ -520,6 +528,7 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
     required bool usesImperialUnits,
     required BulkAddReadSource source,
     MealTextModelFailure? modelFailure,
+    String? refineText,
   }) async {
     if (parsed.items.isEmpty) {
       // Nothing usable. The parser's own errors still go through so the
@@ -537,8 +546,14 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
     }
 
     try {
-      final resolved = await _resolveParsedMealsUseCase.resolve(parsed.items);
+      var resolved = await _resolveParsedMealsUseCase.resolve(parsed.items);
       if (emit.isDone || _superseded(attempt)) return;
+      // Fork: let the model pick among the candidates and size the portions.
+      final refiner = _refiner;
+      if (refiner != null && refineText != null) {
+        resolved = await refiner.refine(refineText, resolved);
+        if (emit.isDone || _superseded(attempt)) return;
+      }
 
       emit(
         BulkAddLoadedState(

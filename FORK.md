@@ -54,6 +54,8 @@ New files (no merge risk):
 | `lib/features/add_meal/presentation/voice/voice_input_button.dart` | Language chip (app, device and English language) and mic, used as a `TextField.suffixIcon` |
 | `test/unit_test/dictation_transcript_test.dart`, `test/features/add_meal/presentation/voice_input_button_test.dart` | Tests |
 | `test/unit_test/fork_voice/english_queries_prompt_test.dart` | **Fork-only** test |
+| `lib/features/add_meal/domain/usecase/refine_resolved_meals_usecase.dart` | **Fork-only**: second AI pass. The model sees the meal plus the database candidates, picks a row per item and estimates grams. Nutrition still comes from the picked row. Reuses upstream's clients and `log_meal_items` tool (`query` = `"<item>:c<N>"`, `quantity`/`unit` = grams), so it adds no schema or HTTP code |
+| `test/unit_test/fork_voice/refine_resolved_meals_test.dart` | **Fork-only** test |
 
 Small edits to upstream files (where merge conflicts could happen):
 
@@ -63,7 +65,8 @@ Small edits to upstream files (where merge conflicts could happen):
 | `lib/features/add_meal/presentation/widgets/add_food_methods.dart` | `suffixIcon:` on the Describe field |
 | `lib/features/add_meal/presentation/screens/bulk_add_screen.dart` | `suffixIcon:` on the review-screen field |
 | `lib/features/add_meal/data/model_meal_text_interpreter.dart` | **Fork-only**: `englishQueries` flag; appends one rule after upstream's prompt |
-| `lib/core/utils/locator.dart` | **Fork-only**: passes `englishQueries: true` |
+| `lib/core/utils/locator.dart` | **Fork-only**: passes `englishQueries: true`; gives `BulkAddBloc` the refiner |
+| `lib/features/add_meal/presentation/bloc/bulk_add_bloc.dart` | **Fork-only**: optional `refiner`, run after resolution for lines a model read |
 | `lib/l10n/intl_en.arb` | five `voiceInput*` keys, placed after `bulkAddParseLabel` |
 | `lib/l10n/intl_es.arb` | **Fork-only**: the same five keys in Spanish (upstream gets translations from Weblate) |
 | `android/app/src/main/AndroidManifest.xml` | `RECORD_AUDIO`, `RecognitionService` query |
